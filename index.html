@@ -73,6 +73,19 @@
   .spend-in.saving { background: #fff3bf; }
   .spend-in.saved { background: #ebfbee; }
   .spend-in.error { background: #fff5f5; border-color: #fa5252; }
+  .proposal { margin-top: 12px; border: 2px solid var(--gold); background: #fffdf5; }
+  .proposal h3 { margin: 0 0 4px; font-size: 17px; color: var(--plum); }
+  .proposal .p-sub { font-size: 13px; color: #7a6670; margin-bottom: 12px; }
+  .p-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .p-cell { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .p-cell label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .p-cell input { width: 100%; box-sizing: border-box; text-align: right; border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: 700 16px Pretendard, sans-serif; background: #fffbe6; }
+  .p-cell .p-cpa { font-size: 12px; color: #7a6670; margin-top: 6px; }
+  .p-cell .p-total { font: 700 18px Pretendard, sans-serif; text-align: right; padding: 7px 0; }
+  .p-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+  .p-actions .hint { font-size: 12px; color: #7a6670; }
+  .proposal.done { border-color: #b2f2bb; background: #f4fcf5; }
+  @media (max-width: 640px) { .p-grid { grid-template-columns: repeat(2, 1fr); } }
   .admin-tip { font-size: 13px; color: var(--plum); background: #fff8f2; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; }
   .foot { font-size: 12px; color: var(--muted); margin-top: 18px; line-height: 1.7; }
   .empty { color: var(--muted); font-size: 14px; padding: 12px 0; }
@@ -141,6 +154,7 @@
       </section>
     </div>
     <div id="reportView">
+    <section class="card proposal" id="proposal" hidden></section>
     <section class="kpis" id="kpis"></section>
 
     <h2>매체별 성과</h2>
@@ -437,12 +451,56 @@
     google.script.run.withSuccessHandler(function (data) { DATA = data; render(); }).getReportData(TOKEN);
     if (view === 'cust' && PIN && CUST) google.script.run.withSuccessHandler(function (res) { if (res && res.ok) { CUST = res.rows; renderCust(); } }).getCustomers(TOKEN, PIN);
   }
+  // Admin only: the 15:30 actual-spend check waits here until the admin approves it (numbers can be edited first).
+  var PROP = null;
+  function loadProposal() { call({ api: 'proposal' }).then(function (r) { if (r.ok) { PROP = r.data; renderProposal(); } }); }
+  function propLeads(day, key) { var d = DATA.days.filter(function (x) { return x.d === day; })[0]; return d ? (key === 'g' ? d.g + d.o : d[key]) : 0; }
+  function propVals() { var v = {}; ['g', 'm', 'k'].forEach(function (k) { var el = $('p_' + k); v[k] = el ? Number(el.value.replace(/[^\d]/g, '')) || 0 : 0; }); return v; }
+  function propCpa() {
+    if (!PROP) return;
+    var v = propVals(), tl = 0, ts = 0;
+    ['g', 'm', 'k'].forEach(function (k) { var n = propLeads(PROP.day, k); tl += n; ts += v[k]; var el = $('pc_' + k); if (el) el.textContent = '신청 ' + n + '건 · CPA ' + (n && v[k] ? won(v[k] / n) + '원' : '–'); });
+    if ($('p_tot')) $('p_tot').textContent = won(ts) + '원';
+    if ($('pc_tot')) $('pc_tot').textContent = '신청 ' + tl + '건 · CPA ' + (tl && ts ? won(ts / tl) + '원' : '–');
+  }
+  function renderProposal() {
+    var box = $('proposal');
+    if (!ADMIN || !PROP) { box.hidden = true; return; }
+    if (document.activeElement && /^p_/.test(document.activeElement.id || '')) return;
+    box.hidden = false;
+    if (PROP.status === 'applied') {
+      box.className = 'card proposal done';
+      var f = PROP.final || PROP;
+      box.innerHTML = '<h3>✓ ' + md(PROP.day) + ' 광고비 입력 완료</h3><div class="p-sub">구글 ' + won(f.g) + '원 · 메타 ' + won(f.m) + '원 · 당근 ' + won(f.k) + '원 (' + (PROP.appliedAt || '') + ' 입력)</div>';
+      return;
+    }
+    box.className = 'card proposal';
+    var cell = function (k, name) { return '<div class="p-cell"><label>' + name + '</label><input id="p_' + k + '" inputmode="numeric" value="' + won(PROP[k]) + '"><div class="p-cpa" id="pc_' + k + '"></div></div>'; };
+    box.innerHTML = '<h3>' + md(PROP.day) + ' 실제 광고비 확인 — 입력 대기 중</h3>' +
+      '<div class="p-sub">' + (PROP.at ? PROP.at + ' 기준 ' : '') + '구글애즈·메타·당근에서 더윤 광고만 확인한 금액입니다. 숫자를 바꾸면 바꾼 숫자로 입력됩니다.' + (PROP.note ? '<br>' + PROP.note.replace(/[<>&]/g, '') : '') + '</div>' +
+      '<div class="p-grid">' + cell('g', '구글') + cell('m', '메타') + cell('k', '당근') +
+      '<div class="p-cell"><label>합계</label><div class="p-total" id="p_tot"></div><div class="p-cpa" id="pc_tot"></div></div></div>' +
+      '<div class="p-actions"><button class="btn" id="p_ok">이대로 입력</button><span class="hint">누르면 아래 일별 표의 ' + md(PROP.day) + ' 광고비 칸에 들어가고 더윤 화면에도 바로 보입니다.</span></div>';
+    ['g', 'm', 'k'].forEach(function (k) { $('p_' + k).addEventListener('input', function (e) { var d = e.target.value.replace(/[^\d]/g, ''); e.target.value = d ? Number(d).toLocaleString('ko-KR') : ''; propCpa(); }); });
+    $('p_ok').addEventListener('click', function () {
+      var b = $('p_ok'), v = propVals(), day = PROP.day;
+      b.disabled = true; b.textContent = '입력 중…';
+      call({ api: 'spend', day: day, m: 'g', value: v.g })
+        .then(function () { return call({ api: 'spend', day: day, m: 'm', value: v.m }); })
+        .then(function () { return call({ api: 'spend', day: day, m: 'k', value: v.k }); })
+        .then(function (r) { if (r.ok) DATA = r.data; return call({ api: 'proposaldone', day: day, g: v.g, m: v.m, k: v.k }); })
+        .then(function (r) { PROP = r.data; toast(md(day) + ' 광고비 입력 완료'); render(); renderProposal(); })
+        .catch(function () { b.disabled = false; b.textContent = '다시 시도'; toast('입력하지 못했습니다. 다시 눌러 주세요.'); });
+    });
+    propCpa();
+  }
+  setInterval(function () { if (ADMIN && !document.hidden) loadProposal(); }, 60000);
   setInterval(poll, 30000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
   call({ api: 'report' }).then(function (r) {
     if (!r.ok) { document.querySelector('.main .wrap').innerHTML = '<div class="card" style="margin-top:20px">링크가 올바르지 않습니다. 받으신 주소 전체를 다시 확인해 주세요.</div>'; return; }
     ROLE = r.role; ADMIN = ROLE === 'admin'; DATA = r.data;
-    if (ADMIN) { $('adminBadge').hidden = false; $('adminTip').hidden = false; enableAdmin(); }
+    if (ADMIN) { $('adminBadge').hidden = false; $('adminTip').hidden = false; enableAdmin(); loadProposal(); }
     render();
   }).catch(function () { document.querySelector('.main .wrap').insertAdjacentHTML('afterbegin', '<div class="card" style="margin-top:20px">데이터를 불러오지 못했습니다. 잠시 후 새로고침해 주세요.</div>'); });
 </script>
