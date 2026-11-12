@@ -105,7 +105,7 @@
 <body>
 <header class="hero">
   <div class="wrap">
-    <div class="brand">THE YUN <span class="badge" id="adminBadge" hidden>관리자</span></div>
+    <div class="brand">THE YUN <span class="badge" id="adminBadge" hidden>관리자 · 광고비 입력 가능</span></div>
     <h1>더 윤 연어PDRN 무료체험 신청 리포트</h1>
     <div class="sub"><span class="live"><i></i>실시간 연결 · 30초마다 자동 갱신</span><span id="updated"></span></div>
   </div>
@@ -158,17 +158,17 @@
       </div>
     </section>
     <section class="card" style="margin-top:12px">
-      <div class="chart-title"><span>일별 DB 단가 (신청 1건당 청구 금액)</span></div>
+      <div class="chart-title"><span>일별 CPA (신청 1건당 광고비)</span></div>
       <div id="cpaChart"></div>
     </section>
 
     <h2>일별 상세</h2>
-    <div class="admin-tip" id="adminTip" hidden></div>
+    <div class="admin-tip" id="adminTip" hidden>노란 칸에 광고비를 입력하고 Enter를 누르거나 다른 칸을 누르면 바로 저장됩니다. Google 시트에도 같이 저장돼요.</div>
     <section class="card table-scroll"><table id="table"></table></section>
     <p class="foot">
-      신청 수와 고객 명단은 신청이 들어오는 즉시 반영되며, 매일 오전 7시에 전날 숫자를 자정 기준으로 한 번 더 확정합니다. 청구 금액도 신청과 함께 즉시 계산됩니다.<br>
+      신청 수와 고객 명단은 신청이 들어오는 즉시 반영되며, 매일 오전 7시에 전날 숫자를 자정 기준으로 한 번 더 확정합니다. 광고비도 입력 즉시 반영됩니다.<br>
       매체 구분: 메타(페이스북·인스타그램 앱), 당근(당근 앱), 구글(유튜브 및 외부 브라우저로 열린 구글 광고).<br>
-      청구 금액 = 신청 수 × DB 단가(1건당 13,500원).
+      CPA = 광고비 ÷ 신청 수. 광고비가 입력되지 않은 날은 CPA를 표시하지 않습니다.
     </p>
     </div>
   </div>
@@ -259,8 +259,8 @@
     var kpi = function (l, v, u, n) { return '<div class="card kpi"><div class="label">' + l + '</div><div class="value">' + v + (u ? '<small>' + u + '</small>' : '') + '</div><div class="note">' + (n || '&nbsp;') + '</div></div>'; };
     $('kpis').innerHTML =
       kpi('신청', won(leads), '건', label) +
-      kpi('청구 금액', spend ? won(spend) : '–', spend ? '원' : '', label) +
-      kpi('DB 단가', spend && leads ? won(spend / leads) : '–', spend && leads ? '원' : '', '신청 1건당 청구 금액') +
+      kpi('광고비', spend ? won(spend) : '–', spend ? '원' : '', label) +
+      kpi('평균 CPA', spend && leads ? won(spend / leads) : '–', spend && leads ? '원' : '', '신청 1건당 광고비') +
       kpi('일평균 신청', (leads / nDays).toFixed(1), '건', nDays + '일 기준');
 
     var allLeads = MEDIA.reduce(function (a, m) { return a + days.reduce(function (x, d) { return x + d[m.key]; }, 0); }, 0);
@@ -269,7 +269,7 @@
       var s = days.reduce(function (a, d) { return a + d[m.spend]; }, 0);
       var share = allLeads ? Math.round(n / allLeads * 100) : 0;
       return '<div class="card" style="' + (state.media[m.key] ? '' : 'opacity:.45') + '"><div class="m-head"><span><span class="dot" style="background:' + m.color + '"></span>' + m.name + '</span><em>비중 ' + share + '%</em></div>' +
-        '<div class="m-grid"><div>신청<b>' + won(n) + '건</b></div><div>청구 금액<b>' + (s ? won(s) + '원' : '–') + '</b></div><div>DB 단가<b>' + cpaTxt(s, n) + '</b></div></div>' +
+        '<div class="m-grid"><div>신청<b>' + won(n) + '건</b></div><div>광고비<b>' + (s ? won(s) + '원' : '–') + '</b></div><div>CPA<b>' + cpaTxt(s, n) + '</b></div></div>' +
         '<div class="share"><i style="width:' + share + '%;background:' + m.color + '"></i></div></div>';
     }).join('');
 
@@ -314,7 +314,7 @@
     var el = $('cpaChart');
     var pts = days.map(function (d) { var n = leadsOf(d), s = spendOf(d); return { d: d.d, v: n && s ? s / n : null }; });
     var has = pts.filter(function (p) { return p.v !== null; });
-    if (!has.length) { el.innerHTML = '<div class="empty">신청이 들어오면 일별 DB 단가가 그려집니다.</div>'; return; }
+    if (!has.length) { el.innerHTML = '<div class="empty">광고비가 입력되면 일별 CPA가 그려집니다.</div>'; return; }
     var W = 1000, H = 200, L = 60, B = 26, T = 22;
     var max = Math.max.apply(null, has.map(function (p) { return p.v; })) * 1.15;
     var gap = (W - L) / Math.max(pts.length, 1);
@@ -322,16 +322,16 @@
     var grid = '', dots = '', path = '', every = Math.ceil(pts.length / 14);
     for (var t = 0; t <= 3; t++) { var yy = T + (H - T - B) * (1 - t / 3); grid += '<line x1="' + L + '" x2="' + W + '" y1="' + yy + '" y2="' + yy + '" stroke="#eee5df"/><text x="' + (L - 8) + '" y="' + (yy + 4) + '" font-size="11" fill="#7a6670" text-anchor="end">' + won(max * t / 3) + '</text>'; }
     pts.forEach(function (p, i) {
-      if (p.v !== null) { path += (path ? 'L' : 'M') + x(i) + ' ' + y(p.v); dots += '<circle cx="' + x(i) + '" cy="' + y(p.v) + '" r="4" fill="#521d37"><title>' + md(p.d) + ' DB 단가 ' + won(p.v) + '원</title></circle><text x="' + x(i) + '" y="' + (y(p.v) - 9) + '" font-size="11" font-weight="700" fill="#521d37" text-anchor="middle">' + won(p.v) + '</text>'; }
+      if (p.v !== null) { path += (path ? 'L' : 'M') + x(i) + ' ' + y(p.v); dots += '<circle cx="' + x(i) + '" cy="' + y(p.v) + '" r="4" fill="#521d37"><title>' + md(p.d) + ' CPA ' + won(p.v) + '원</title></circle><text x="' + x(i) + '" y="' + (y(p.v) - 9) + '" font-size="11" font-weight="700" fill="#521d37" text-anchor="middle">' + won(p.v) + '</text>'; }
       if (i % every === 0) dots += '<text x="' + x(i) + '" y="' + (H - 7) + '" font-size="11" fill="#7a6670" text-anchor="middle">' + md(p.d) + '</text>';
     });
-    el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="일별 DB 단가">' + grid + '<path d="' + path + '" fill="none" stroke="#c9a3b3" stroke-width="2"/>' + dots + '</svg>';
+    el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="일별 CPA">' + grid + '<path d="' + path + '" fill="none" stroke="#c9a3b3" stroke-width="2"/>' + dots + '</svg>';
   }
 
   function table(days) {
-    var head = '<thead><tr><th rowspan="2">날짜</th>' + MEDIA.map(function (m) { return '<th class="grp" colspan="2" style="color:' + m.hex + '">' + m.name + '</th>'; }).join('') + '<th rowspan="2">신청 합계</th><th rowspan="2">총 청구 금액</th><th rowspan="2">DB 단가</th></tr><tr>' + MEDIA.map(function () { return '<th>신청</th><th>청구 금액</th>'; }).join('') + '</tr></thead>';
+    var head = '<thead><tr><th rowspan="2">날짜</th>' + MEDIA.map(function (m) { return '<th class="grp" colspan="2" style="color:' + m.hex + '">' + m.name + '</th>'; }).join('') + '<th rowspan="2">신청 합계</th><th rowspan="2">총 광고비</th><th rowspan="2">CPA</th></tr><tr>' + MEDIA.map(function () { return '<th>신청</th><th>광고비</th>'; }).join('') + '</tr></thead>';
     var cell = function (d, m) {
-      if (ADMIN && !DATA.price) return '<td><input class="spend-in" inputmode="numeric" data-d="' + d.d + '" data-m="' + m.key + '" value="' + (d[m.spend] ? won(d[m.spend]) : '') + '" placeholder="0"></td>';
+      if (ADMIN) return '<td><input class="spend-in" inputmode="numeric" data-d="' + d.d + '" data-m="' + m.key + '" value="' + (d[m.spend] ? won(d[m.spend]) : '') + '" placeholder="0"></td>';
       return '<td>' + (d[m.spend] ? won(d[m.spend]) : '–') + '</td>';
     };
     var rows = days.slice().reverse().map(function (d) {
@@ -442,7 +442,7 @@
   call({ api: 'report' }).then(function (r) {
     if (!r.ok) { document.querySelector('.main .wrap').innerHTML = '<div class="card" style="margin-top:20px">링크가 올바르지 않습니다. 받으신 주소 전체를 다시 확인해 주세요.</div>'; return; }
     ROLE = r.role; ADMIN = ROLE === 'admin'; DATA = r.data;
-    if (ADMIN) { $('adminBadge').hidden = false; enableAdmin(); }
+    if (ADMIN) { $('adminBadge').hidden = false; $('adminTip').hidden = false; enableAdmin(); }
     render();
   }).catch(function () { document.querySelector('.main .wrap').insertAdjacentHTML('afterbegin', '<div class="card" style="margin-top:20px">데이터를 불러오지 못했습니다. 잠시 후 새로고침해 주세요.</div>'); });
 </script>
