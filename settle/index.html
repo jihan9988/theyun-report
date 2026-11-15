@@ -39,8 +39,9 @@ button:disabled{opacity:.5}
   var PAGE = new URLSearchParams(location.search).get('page') || 'settle';
   var SKEY = 'owner_s', origFetch = window.fetch.bind(window), mode = 'unlock';
   var $ = function (id) { return document.getElementById(id); };
-  // Old bookmarks carried a key after '#'; drop it from the address bar and history.
-  if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+  var SHARE = PAGE === 'settle-staff' ? ((location.hash.match(/k=([A-Za-z0-9]+)/) || [])[1] || '') : '';
+  // Old owner bookmarks carried a key after '#'; drop it. The meeting share link keeps its key so a reload still works.
+  if (location.hash && !SHARE) history.replaceState(null, '', location.pathname + location.search);
   function post(body) {
     return origFetch(API, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer' })
       .then(function (r) { return r.json(); });
@@ -69,11 +70,14 @@ button:disabled{opacity:.5}
       var url = String(input && input.url || input), i = url.indexOf('?'), base = i < 0 ? url : url.slice(0, i);
       var target = O.targets[base];
       if (!target) return origFetch(input, init);
-      return post({ api: 'ownerapi', s: getS(), target: target, query: i < 0 ? '' : url.slice(i + 1) }).then(function (r) {
+      var req = { api: 'ownerapi', target: target, query: i < 0 ? '' : url.slice(i + 1) };
+      if (SHARE) req.k = SHARE; else req.s = getS();
+      return post(req).then(function (r) {
         if (r && r.error === 'SESSION') { setS(''); location.reload(); }
         return new Response(JSON.stringify(r), { status: 200, headers: { 'Content-Type': 'application/json' } });
       });
     };
+    if (SHARE) return;
     document.addEventListener('DOMContentLoaded', function () {
       var bar = document.createElement('div');
       bar.setAttribute('style', 'position:fixed;right:12px;bottom:12px;z-index:99999;display:flex;gap:6px;font:700 13px -apple-system,sans-serif');
@@ -94,7 +98,16 @@ button:disabled{opacity:.5}
       document.open(); document.write(r.html); document.close();
     }).catch(function () { show('연결하지 못했어요', '잠시 뒤 새로고침해 주세요.', false); });
   }
+  function openShared() {
+    show('여는 중…', '', false);
+    post({ api: 'ownerpage', k: SHARE }).then(function (r) {
+      if (!r.ok) { show('열 수 없는 링크예요', '받은 링크 전체를 다시 열어 주세요.', false); return; }
+      window.__OWNER = r.cfg; shim(r.cfg);
+      document.open(); document.write(r.html); document.close();
+    }).catch(function () { show('연결하지 못했어요', '잠시 뒤 새로고침해 주세요.', false); });
+  }
   function start() {
+    if (SHARE) return openShared();
     var s = getS();
     if (s) return open_(s);
     post({ api: 'ownerstatus' }).then(function (st) {
