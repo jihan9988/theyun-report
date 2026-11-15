@@ -456,7 +456,7 @@
   var PROP = null;
   // Admin only: prepaid balance, fee income and margin. Never requested or rendered for the view link.
   function loadMoney() {
-    call({ api: 'prepaid' }).then(function (r) {
+    fetch(API + '?api=prepaid&v=' + encodeURIComponent(TOKEN), { credentials: 'omit', cache: 'no-store' }).then(function (x) { return x.json(); }).then(function (r) {
       if (!r.ok || !r.data || !r.data.list.length) return;
       var d = r.data, w = function (n) { return Math.round(n).toLocaleString('ko-KR'); }, low = d.avg && d.remain < d.avg * 2;
       var rows = d.list.map(function (x, i) { var fee = Math.round(x.ad * 0.15), sub = x.ad + fee, vat = Math.floor(sub * 0.1);
