@@ -155,6 +155,7 @@
     </div>
     <div id="reportView">
     <section class="card proposal" id="proposal" hidden></section>
+    <section class="card" id="money" hidden style="margin-bottom:12px"></section>
     <section class="kpis" id="kpis"></section>
 
     <h2>매체별 성과</h2>
@@ -453,6 +454,25 @@
   }
   // Admin only: the 15:30 actual-spend check waits here until the admin approves it (numbers can be edited first).
   var PROP = null;
+  // Admin only: prepaid balance, fee income and margin. Never requested or rendered for the view link.
+  function loadMoney() {
+    call({ api: 'prepaid' }).then(function (r) {
+      if (!r.ok || !r.data || !r.data.list.length) return;
+      var d = r.data, w = function (n) { return Math.round(n).toLocaleString('ko-KR'); }, low = d.avg && d.remain < d.avg * 2;
+      var rows = d.list.map(function (x, i) { var fee = Math.round(x.ad * 0.15), sub = x.ad + fee, vat = Math.floor(sub * 0.1);
+        return '<tr><td>' + (i + 1) + '차 선입금</td><td>광고비 ' + w(x.ad) + (x.carry ? ' + 이월 ' + w(x.carry) : '') + '</td><td>수수료 ' + w(fee) + '</td><td>부가세 ' + w(vat) + '</td><td><b>' + w(sub + vat) + '원</b></td></tr>'; }).join('');
+      var n = d.next;
+      $('money').innerHTML = '<div class="chart-title"><span>🔒 선입금·수익 (관리자만 보임)</span></div>' +
+        '<div class="kpis" style="margin:8px 0 12px">' +
+        '<div class="card kpi"><div class="label">남은 광고비</div><div class="value" style="color:' + (low ? '#e03131' : '#2b8a3e') + '">' + w(d.remain) + '<small>원</small></div><div class="note">' + (d.daysLeft !== null ? '약 ' + d.daysLeft + '일치 · 하루 평균 ' + w(d.avg) + '원' : '') + '</div></div>' +
+        '<div class="card kpi"><div class="label">수수료 수입 (15%, 부가세 제외)</div><div class="value">' + w(d.fees) + '<small>원</small></div><div class="note">선입금 ' + d.list.length + '회</div></div>' +
+        '<div class="card kpi"><div class="label">광고비 차익 (리포트 − 실제)</div><div class="value">' + w(d.adMargin) + '<small>원</small></div><div class="note">리포트 ' + w(d.repBoth) + ' − 실제 ' + w(d.actBoth) + '</div></div>' +
+        '<div class="card kpi"><div class="label">순수익 합계</div><div class="value" style="color:#2b8a3e">' + w(d.fees + d.adMargin) + '<small>원</small></div><div class="note">수수료 + 광고비 차익</div></div></div>' +
+        '<div class="table-scroll"><table><tbody>' + rows + '<tr><td>광고비 예산 합계</td><td colspan="3">사용 ' + w(d.used) + '원</td><td><b>' + w(d.budget) + '원</b></td></tr></tbody></table></div>' +
+        (low ? '<p style="margin:10px 0 0;color:#e03131;font-weight:700">잔액이 이틀치 아래입니다. 다음 청구: 광고비 ' + w(n.ad) + ' + 수수료 ' + w(n.fee) + ' = ' + w(n.sub) + ' + 부가세 ' + w(Math.floor(n.sub * 0.1)) + ' = ' + w(n.sub + Math.floor(n.sub * 0.1)) + '원</p>' : '');
+      $('money').hidden = false;
+    });
+  }
   function loadProposal() { call({ api: 'proposal' }).then(function (r) { if (r.ok) { PROP = r.data; renderProposal(); } }); }
   function propLeads(day, key) { var d = DATA.days.filter(function (x) { return x.d === day; })[0]; return d ? (key === 'g' ? d.g + d.o : d[key]) : 0; }
   function propVals() { var v = {}; ['g', 'm', 'k'].forEach(function (k) { var el = $('p_' + k); v[k] = el ? Number(el.value.replace(/[^\d]/g, '')) || 0 : 0; }); return v; }
@@ -500,7 +520,7 @@
   call({ api: 'report' }).then(function (r) {
     if (!r.ok) { document.querySelector('.main .wrap').innerHTML = '<div class="card" style="margin-top:20px">링크가 올바르지 않습니다. 받으신 주소 전체를 다시 확인해 주세요.</div>'; return; }
     ROLE = r.role; ADMIN = ROLE === 'admin'; DATA = r.data;
-    if (ADMIN) { $('adminBadge').hidden = false; $('adminTip').hidden = false; enableAdmin(); loadProposal(); }
+    if (ADMIN) { $('adminBadge').hidden = false; $('adminTip').hidden = false; enableAdmin(); loadProposal(); loadMoney(); }
     render();
   }).catch(function () { document.querySelector('.main .wrap').insertAdjacentHTML('afterbegin', '<div class="card" style="margin-top:20px">데이터를 불러오지 못했습니다. 잠시 후 새로고침해 주세요.</div>'); });
 </script>
