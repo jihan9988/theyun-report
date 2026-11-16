@@ -475,7 +475,7 @@
     });
   }
   function loadProposal() { call({ api: 'proposal' }).then(function (r) { if (r.ok) { PROP = r.data; renderProposal(); } }); }
-  function propLeads(day, key) { var d = DATA.days.filter(function (x) { return x.d === day; })[0]; return d ? (key === 'g' ? d.g + d.o : d[key]) : 0; }
+  function propLeads(day, key) { var d = DATA.days.filter(function (x) { return x.d === day; })[0]; return d ? d[key] : 0; }
   function propVals() { var v = {}; ['g', 'm', 'k'].forEach(function (k) { var el = $('p_' + k); v[k] = el ? Number(el.value.replace(/[^\d]/g, '')) || 0 : 0; }); return v; }
   function propCpa() {
     if (!PROP) return;
