@@ -12,7 +12,7 @@
   :root {
     --ink: #2a1622; --muted: #7a6670; --line: #eadfd8; --bg: #faf6f2; --card: #ffffff; --soft: #f6eee8;
     --plum: #521d37; --plum-2: #692c42; --gold: #ffbc95;
-    --meta: #4263eb; --google: #2f9e44; --karrot: #f76707;
+    --meta: #4263eb; --google: #2f9e44; --karrot: #f76707; --tiktok: #d6336c;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: Pretendard, -apple-system, "Apple SD Gothic Neo", sans-serif; }
@@ -42,7 +42,7 @@
   .kpi .value small { font-size: 14px; font-weight: 600; color: var(--muted); margin-left: 2px; }
   .kpi .note { font-size: 12px; color: var(--muted); margin-top: 4px; }
   h2 { font: 700 17px/1.4 Pretendard, sans-serif; margin: 30px 4px 12px; }
-  .media { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .media { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .m-head { display: flex; align-items: center; justify-content: space-between; font-weight: 700; }
   .m-head span { display: inline-flex; align-items: center; gap: 8px; }
   .m-head em { font-style: normal; font-size: 12px; color: var(--muted); font-weight: 600; }
@@ -182,7 +182,7 @@
     <section class="card table-scroll"><table id="table"></table></section>
     <p class="foot">
       신청 수와 고객 명단은 신청이 들어오는 즉시 반영되며, 매일 오전 7시에 전날 숫자를 자정 기준으로 한 번 더 확정합니다. 광고비도 입력 즉시 반영됩니다.<br>
-      매체 구분: 메타(페이스북·인스타그램 앱), 당근(당근 앱), 구글(유튜브 및 외부 브라우저로 열린 구글 광고).<br>
+      매체 구분: 메타(페이스북·인스타그램 앱), 당근(당근 앱), 틱톡(틱톡 앱), 구글(유튜브 및 외부 브라우저로 열린 구글 광고).<br>
       CPA = 광고비 ÷ 신청 수. 광고비가 입력되지 않은 날은 CPA를 표시하지 않습니다.
     </p>
     </div>
@@ -216,9 +216,10 @@
   var MEDIA = [
     { key: 'm', spend: 'sm', name: '메타', color: 'var(--meta)', hex: '#4263eb' },
     { key: 'g', spend: 'sg', name: '구글', color: 'var(--google)', hex: '#2f9e44' },
-    { key: 'k', spend: 'sk', name: '당근', color: 'var(--karrot)', hex: '#f76707' }
+    { key: 'k', spend: 'sk', name: '당근', color: 'var(--karrot)', hex: '#f76707' },
+    { key: 'o', spend: 'st', name: '틱톡', color: 'var(--tiktok)', hex: '#d6336c' }
   ];
-  var state = { period: 'all', from: '', to: '', media: { m: true, g: true, k: true } };
+  var state = { period: 'all', from: '', to: '', media: { m: true, g: true, k: true, o: true } };
   var $ = function (id) { return document.getElementById(id); };
   var won = function (n) { return Math.round(n).toLocaleString('ko-KR'); };
   var cpaTxt = function (s, n) { return s > 0 && n > 0 ? won(s / n) + '원' : '–'; };
@@ -237,7 +238,7 @@
   $('mediaFilter').addEventListener('click', function (e) {
     var b = e.target.closest('[data-m]'); if (!b) return;
     var k = b.dataset.m; state.media[k] = !state.media[k];
-    if (!state.media.m && !state.media.g && !state.media.k) state.media[k] = true;
+    if (!state.media.m && !state.media.g && !state.media.k && !state.media.o) state.media[k] = true;
     render();
   });
   ['from', 'to'].forEach(function (id) { $(id).addEventListener('change', function () { state[id] = $(id).value; render(); }); });
@@ -394,7 +395,7 @@
     $('custView').hidden = view !== 'cust';
     if (view === 'cust' && PIN && !CUST) loadCustomers(PIN, true);
   });
-  var mediaKey = { '메타': 'm', '구글': 'g', '당근': 'k' };
+  var mediaKey = { '메타': 'm', '구글': 'g', '당근': 'k', '틱톡': 'o' };
   var age = function (b) { var m = String(b).replace(/\D/g, '').match(/^(\d{4})(\d{2})(\d{2})$/); if (!m) return ''; var t = new Date(DATA.today + 'T12:00:00'); var a = t.getFullYear() - Number(m[1]); if (t.getMonth() + 1 < Number(m[2]) || (t.getMonth() + 1 === Number(m[2]) && t.getDate() < Number(m[3]))) a--; return a > 0 && a < 120 ? ' (만 ' + a + '세)' : ''; };
   var fmtBirth = function (b) { var m = String(b).replace(/\D/g, '').match(/^(\d{4})(\d{2})(\d{2})$/); return m ? m[1] + '.' + m[2] + '.' + m[3] : (b || '–'); };
   var esc = function (v) { return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
@@ -412,7 +413,7 @@
     if (!CUST) return;
     var rows = custFiltered();
     $('custCount').textContent = rows.length + '명';
-    var colorOf = { '메타': '#4263eb', '구글': '#2f9e44', '당근': '#f76707' };
+    var colorOf = { '메타': '#4263eb', '구글': '#2f9e44', '당근': '#f76707', '틱톡': '#d6336c' };
     $('custTable').innerHTML = '<thead><tr><th>접수</th><th>이름</th><th>연락처</th><th>성별</th><th>생년월일</th><th>매체</th></tr></thead><tbody>' +
       (rows.map(function (r) {
         return '<tr><td>' + md(r.d) + ' ' + esc(r.t.slice(0, 5)) + '</td><td><b>' + esc(r.name) + '</b></td><td><a href="tel:' + esc(r.phone.replace(/[^\d]/g, '')) + '">' + esc(r.phone) + '</a></td><td>' + esc(r.gender || '–') + '</td><td>' + esc(fmtBirth(r.birth)) + esc(age(r.birth)) + '</td><td><span class="tag"><span class="dot" style="background:' + (colorOf[r.media] || '#adb5bd') + '"></span>' + esc(r.media) + '</span></td></tr>';
