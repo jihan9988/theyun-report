@@ -12,7 +12,7 @@
   :root {
     --ink: #2a1622; --muted: #7a6670; --line: #eadfd8; --bg: #faf6f2; --card: #ffffff; --soft: #f6eee8;
     --plum: #521d37; --plum-2: #692c42; --gold: #ffbc95;
-    --meta: #4263eb; --google: #2f9e44; --karrot: #f76707; --tiktok: #d6336c;
+    --meta: #4263eb; --google: #2f9e44; --karrot: #f76707; --tiktok: #d6336c; --naver: #7048e8;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: Pretendard, -apple-system, "Apple SD Gothic Neo", sans-serif; }
@@ -43,6 +43,7 @@
   .kpi .note { font-size: 12px; color: var(--muted); margin-top: 4px; }
   h2 { font: 700 17px/1.4 Pretendard, sans-serif; margin: 30px 4px 12px; }
   .media { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .media > :last-child:nth-child(odd) { grid-column: 1 / -1; }
   .m-head { display: flex; align-items: center; justify-content: space-between; font-weight: 700; }
   .m-head span { display: inline-flex; align-items: center; gap: 8px; }
   .m-head em { font-style: normal; font-size: 12px; color: var(--muted); font-weight: 600; }
@@ -182,7 +183,7 @@
     <section class="card table-scroll"><table id="table"></table></section>
     <p class="foot">
       신청 수와 고객 명단은 신청이 들어오는 즉시 반영되며, 매일 오전 7시에 전날 숫자를 자정 기준으로 한 번 더 확정합니다. 광고비도 입력 즉시 반영됩니다.<br>
-      매체 구분: 메타(페이스북·인스타그램 앱), 당근(당근 앱), 틱톡(틱톡 앱), 구글(유튜브 및 외부 브라우저로 열린 구글 광고).<br>
+      매체 구분: 메타(페이스북·인스타그램 앱), 당근(당근 앱), 틱톡(틱톡 앱), 네이버(네이버 앱), 구글(유튜브 및 외부 브라우저로 열린 구글 광고).<br>
       CPA = 광고비 ÷ 신청 수. 광고비가 입력되지 않은 날은 CPA를 표시하지 않습니다.
     </p>
     </div>
@@ -217,9 +218,10 @@
     { key: 'm', spend: 'sm', name: '메타', color: 'var(--meta)', hex: '#4263eb' },
     { key: 'g', spend: 'sg', name: '구글', color: 'var(--google)', hex: '#2f9e44' },
     { key: 'k', spend: 'sk', name: '당근', color: 'var(--karrot)', hex: '#f76707' },
-    { key: 'o', spend: 'st', name: '틱톡', color: 'var(--tiktok)', hex: '#d6336c' }
+    { key: 'o', spend: 'st', name: '틱톡', color: 'var(--tiktok)', hex: '#d6336c' },
+    { key: 'n', spend: 'sn', name: '네이버', color: 'var(--naver)', hex: '#7048e8' }
   ];
-  var state = { period: 'all', from: '', to: '', media: { m: true, g: true, k: true, o: true } };
+  var state = { period: 'all', from: '', to: '', media: { m: true, g: true, k: true, o: true, n: true } };
   var $ = function (id) { return document.getElementById(id); };
   var won = function (n) { return Math.round(n).toLocaleString('ko-KR'); };
   var cpaTxt = function (s, n) { return s > 0 && n > 0 ? won(s / n) + '원' : '–'; };
@@ -359,7 +361,7 @@
     var sum = function (k) { return days.reduce(function (a, d) { return a + d[k]; }, 0); };
     var tn = days.reduce(function (a, d) { return a + leadsOf(d); }, 0), ts = days.reduce(function (a, d) { return a + spendOf(d); }, 0);
     var foot = '<tfoot><tr><td>합계</td>' + MEDIA.map(function (m) { return '<td>' + sum(m.key) + '</td><td>' + (sum(m.spend) ? won(sum(m.spend)) : '–') + '</td>'; }).join('') + '<td>' + tn + '</td><td>' + (ts ? won(ts) + '원' : '–') + '</td><td>' + cpaTxt(ts, tn) + '</td></tr></tfoot>';
-    $('table').innerHTML = head + '<tbody>' + (rows || '<tr><td colspan="10" class="empty">선택한 기간에 데이터가 없습니다.</td></tr>') + '</tbody>' + foot;
+    $('table').innerHTML = head + '<tbody>' + (rows || '<tr><td colspan="13" class="empty">선택한 기간에 데이터가 없습니다.</td></tr>') + '</tbody>' + foot;
   }
 
   function isEditing() { var a = document.activeElement; return !!(a && a.classList && a.classList.contains('spend-in')); }
@@ -369,7 +371,7 @@
       var raw = inp.value.replace(/[^\d]/g, '');
       var d = inp.dataset.d, m = inp.dataset.m;
       var cur = DATA.days.filter(function (x) { return x.d === d; })[0];
-      var key = { g: 'sg', m: 'sm', k: 'sk' }[m];
+      var key = { g: 'sg', m: 'sm', k: 'sk', o: 'st', n: 'sn' }[m];
       if (cur && (cur[key] || 0) === (Number(raw) || 0)) return;
       inp.classList.remove('saved', 'error'); inp.classList.add('saving');
       google.script.run
@@ -395,7 +397,7 @@
     $('custView').hidden = view !== 'cust';
     if (view === 'cust' && PIN && !CUST) loadCustomers(PIN, true);
   });
-  var mediaKey = { '메타': 'm', '구글': 'g', '당근': 'k', '틱톡': 'o' };
+  var mediaKey = { '메타': 'm', '구글': 'g', '당근': 'k', '틱톡': 'o', '네이버': 'n' };
   var age = function (b) { var m = String(b).replace(/\D/g, '').match(/^(\d{4})(\d{2})(\d{2})$/); if (!m) return ''; var t = new Date(DATA.today + 'T12:00:00'); var a = t.getFullYear() - Number(m[1]); if (t.getMonth() + 1 < Number(m[2]) || (t.getMonth() + 1 === Number(m[2]) && t.getDate() < Number(m[3]))) a--; return a > 0 && a < 120 ? ' (만 ' + a + '세)' : ''; };
   var fmtBirth = function (b) { var m = String(b).replace(/\D/g, '').match(/^(\d{4})(\d{2})(\d{2})$/); return m ? m[1] + '.' + m[2] + '.' + m[3] : (b || '–'); };
   var esc = function (v) { return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
@@ -413,7 +415,7 @@
     if (!CUST) return;
     var rows = custFiltered();
     $('custCount').textContent = rows.length + '명';
-    var colorOf = { '메타': '#4263eb', '구글': '#2f9e44', '당근': '#f76707', '틱톡': '#d6336c' };
+    var colorOf = { '메타': '#4263eb', '구글': '#2f9e44', '당근': '#f76707', '틱톡': '#d6336c', '네이버': '#7048e8' };
     $('custTable').innerHTML = '<thead><tr><th>접수</th><th>이름</th><th>연락처</th><th>성별</th><th>생년월일</th><th>매체</th></tr></thead><tbody>' +
       (rows.map(function (r) {
         return '<tr><td>' + md(r.d) + ' ' + esc(r.t.slice(0, 5)) + '</td><td><b>' + esc(r.name) + '</b></td><td><a href="tel:' + esc(r.phone.replace(/[^\d]/g, '')) + '">' + esc(r.phone) + '</a></td><td>' + esc(r.gender || '–') + '</td><td>' + esc(fmtBirth(r.birth)) + esc(age(r.birth)) + '</td><td><span class="tag"><span class="dot" style="background:' + (colorOf[r.media] || '#adb5bd') + '"></span>' + esc(r.media) + '</span></td></tr>';
