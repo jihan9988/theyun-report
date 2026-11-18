@@ -466,8 +466,9 @@
         return '<tr><td>' + (i + 1) + '차 선입금</td><td>광고비 ' + w(x.ad) + (x.carry ? ' + 이월 ' + w(x.carry) : '') + '</td><td>수수료 ' + w(fee) + '</td><td>부가세 ' + w(vat) + '</td><td><b>' + w(sub + vat) + '원</b></td></tr>'; }).join('');
       var n = d.next;
       $('money').innerHTML = '<div class="chart-title"><span>🔒 선입금·수익 (관리자만 보임)</span></div>' +
-        '<div class="kpis" style="margin:8px 0 12px">' +
+        '<div class="kpis" style="margin:8px 0 12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">' +
         '<div class="card kpi"><div class="label">남은 광고비</div><div class="value" style="color:' + (low ? '#e03131' : '#2b8a3e') + '">' + w(d.remain) + '<small>원</small></div><div class="note">' + (d.daysLeft !== null ? '약 ' + d.daysLeft + '일치 · 하루 평균 ' + w(d.avg) + '원' : '') + '</div></div>' +
+        (d.actUsed != null ? '<div class="card kpi"><div class="label">실제 사용한 광고비</div><div class="value">' + w(d.actUsed) + '<small>원</small></div><div class="note">플랫폼 실제 지출 합계' + (d.actToday != null ? ' · 오늘 ' + w(d.actToday) + '원 포함' : '') + '<br>실제 기준 남은 돈 ' + w(d.actRemain) + '원' + (d.actMissing && d.actMissing.length ? '<br>실제 기록 없는 ' + d.actMissing.length + '일은 리포트 값' : '') + '</div></div>' : '') +
         '<div class="card kpi"><div class="label">수수료 수입 (15%, 부가세 제외)</div><div class="value">' + w(d.fees) + '<small>원</small></div><div class="note">선입금 ' + d.list.length + '회</div></div>' +
         '<div class="card kpi"><div class="label">광고비 차익 (리포트 − 실제)</div><div class="value">' + w(d.adMargin) + '<small>원</small></div><div class="note">리포트 ' + w(d.repBoth) + ' − 실제 ' + w(d.actBoth) + '</div></div>' +
         '<div class="card kpi"><div class="label">순수익 합계</div><div class="value" style="color:#2b8a3e">' + w(d.fees + d.adMargin) + '<small>원</small></div><div class="note">수수료 + 광고비 차익</div></div></div>' +
